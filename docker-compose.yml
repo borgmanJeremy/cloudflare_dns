@@ -1,0 +1,7 @@
+version: "3.9"
+services:
+  cloudflare_dns_update:
+    build: .
+    environment:
+      - CLOUDFLARE_API_KEY=super_secret_api
+      - CLOUDFLARE_URL_LIST=domainname_1.com:domainname_2.com
