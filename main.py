@@ -87,15 +87,14 @@ def update_a_record_ip(zone_id: str, ip_address: str):
     ip address. All A-records associated with this ID will be update d
     to the new IP."""
 
-    r = dns_info(zone_id)
-    for record in r["result"]:
+    get_res = dns_info(zone_id)
+    res: List[DnsInfo] = get_res["result"]
+    for record in res:
         if record["type"] == "A":
             record_id = record["id"]
             record_name = record["name"]
 
             endpoint = "zones/" + zone_id + "/dns_records/" + record_id
-            # NP: I wouldn't overwrite r here - use a new name if for no other reason than to shut up my LSP
-            # NP: I'm also not sure how to type stuff with requests... maybe making a custom type would be a fancy thing to do?
             r = requests.put(
                 api_url + endpoint,
                 headers=headers,
