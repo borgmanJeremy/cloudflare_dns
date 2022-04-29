@@ -1,7 +1,8 @@
-import requests
-import os
 import logging
-from typing import TypedDict
+import os
+from typing import Any, Dict, List, TypedDict
+
+import requests
 
 
 class DnsInfo(TypedDict):
@@ -20,107 +21,155 @@ class DnsInfo(TypedDict):
     modified_on: str
 
 
-def list_zones() -> list[DnsInfo]:
-    '''List all zones associated with this cloudflare API key'''
+def list_zones() -> List[DnsInfo]:
+    """list_zones.
 
-    endpoint = 'zones'
+    List all zones associated with this cloudflare API key
+
+    Args:
+
+    Returns:
+        List[DnsInfo]:
+    """
+
+    endpoint = "zones"
     r = requests.get(api_url + endpoint, headers=headers)
 
     if r.status_code == 200:
-        return r.json()['result']
+        return r.json()["result"]
 
     else:
-        logging.error('HTTP: error listing domain')
+        logging.error("HTTP: error listing domain")
         logging.debug(r)
         raise RuntimeError("Listing DNS did not return 200")
 
 
+class NoZoneDataError(Exception):
+    ...
+
+
 def get_zone_id_by_name(name: str) -> str:
-    '''Get a zone id associated with API key and domain name'''
+    """Get a zone id associated with API key and domain name"""
 
     zone_data = list_zones()
     for zone in zone_data:
-        if zone['name'] == name:
-            return zone['id']
+        if zone["name"] == name:
+            return zone["id"]
+    raise NoZoneDataError
 
 
-def dns_info(zone_id: str) -> dict:
-    '''Get all dns information related to this zone id'''
+# NP - What is the structure of the returned dictionaory?
+def dns_info(zone_id: str) -> Dict[Any, Any]:
+    """Get all dns information related to this zone id"""
 
-    endpoint = 'zones/' + zone_id + '/dns_records'
+    endpoint = "zones/" + zone_id + "/dns_records"
     r = requests.get(api_url + endpoint, headers=headers)
 
     if r.status_code == 200:
         return r.json()
 
     else:
-        logging.error('HTTP: error getting dns info')
+        logging.error("HTTP: error getting dns info")
         logging.debug(r)
         raise RuntimeError("Getting DNS info did not return 200")
 
 
-def get_a_record_ips(zone_id: str) -> list[str]:
-    '''Get all ip address associated with all A-records on this zone id'''
+def get_a_record_ips(zone_id: str) -> List[str]:
+    """Get all ip address associated with all A-records on this zone id"""
 
     r = dns_info(zone_id)
     ip_list = []
-    for record in r['result']:
-        if record['type'] == 'A':
-            ip_list.append(record['content'])
+    res: List[DnsInfo] = r["result"]
+    for record in res:
+        if record["type"] == "A":
+            ip_list.append(record["content"])
     return ip_list
 
 
 def update_a_record_ip(zone_id: str, ip_address: str):
-    '''This function takes a zone id (represents id for domain name) and new
+    """This function takes a zone id (represents id for domain name) and new
     ip address. All A-records associated with this ID will be update d
-    to the new IP.'''
+    to the new IP."""
 
-    r = dns_info(zone_id)
-    for record in r['result']:
-        if record['type'] == 'A':
-            record_id = record['id']
-            record_name = record['name']
+    get_res = dns_info(zone_id)
+    res: List[DnsInfo] = get_res["result"]
+    for record in res:
+        if record["type"] == "A":
+            record_id = record["id"]
+            record_name = record["name"]
 
-            endpoint = 'zones/' + zone_id + '/dns_records/' + record_id
-            r = requests.put(api_url + endpoint, headers=headers,
-                             json={'type': 'A', 'name': record_name,
-                                   'ttl': '1', 'content': ip_address})
+            endpoint = "zones/" + zone_id + "/dns_records/" + record_id
+            r = requests.put(
+                api_url + endpoint,
+                headers=headers,
+                json={
+                    "type": "A",
+                    "name": record_name,
+                    "ttl": "1",
+                    "content": ip_address,
+                },
+            )
 
             if r.status_code == 200:
-                logging.info("Successfully Changed {} in zone {}".format(
-                             record_name, zone_id))
+                logging.info(
+                    "Successfully Changed {} in zone {}".format(record_name, zone_id)
+                )
             else:
-                logging.error("HTTP: {} Failed to change {} in zone {}".format(
-                              r.status_code, record_name, zone_id))
+                logging.error(
+                    "HTTP: {} Failed to change {} in zone {}".format(
+                        r.status_code, record_name, zone_id
+                    )
+                )
                 logging.debug(r)
                 raise RuntimeError("Failed to change dns information")
 
 
 def update_ip(domain_name: str, new_ip: str):
-    '''If IP address in cloudflare does match provided IP, update all A-records
-    associated with this domain name on cloudflare'''
+    """If IP address in cloudflare does match provided IP, update all A-records
+    associated with this domain name on cloudflare"""
 
+    # NP: id is a reserved variable name in python - this works but breaks the builtin
     id = get_zone_id_by_name(domain_name)
     ip_addresses = get_a_record_ips(id)
     for address in ip_addresses:
         if address != new_ip:
             update_a_record_ip(id, new_ip)
         else:
-            logging.info('{} is up to date'.format(domain_name))
+            logging.info("{} is up to date".format(domain_name))
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+class NoAuthKeyError(Exception):
+    ...
 
-    auth_key = os.environ.get('CLOUDFLARE_API_KEY')
-    domain_list = os.environ.get('CLOUDFLARE_URL_LIST').split(':')
 
-    api_url = 'https://api.cloudflare.com/client/v4/'
-    headers = {'Content-Type': 'application/json',
-               'Authorization': 'Bearer ' + auth_key}
+class NoDomainListError(Exception):
+    ...
 
-    ip = requests.get('https://api.ipify.org').content.decode('utf8')
+
+if __name__ == "__main__":
+    # NP: I'd configure this at the top....
+    # import logging
+    # logger = logging.getLogger(__name__)
+    # # then config on logger not logging (I'm not an expert here, there's lots of ways to log appropriately)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+
+    # NP: the .get() should include a default value otherwise you'll get None
+    auth_key = os.environ.get("CLOUDFLARE_API_KEY", None)
+    domain_list_raw = os.environ.get("CLOUDFLARE_URL_LIST", None)
+    if auth_key is None:
+        raise NoAuthKeyError
+    if domain_list_raw is None:
+        raise NoDomainListError
+    domain_list: List[str] = domain_list_raw.split(":")
+
+    api_url = "https://api.cloudflare.com/client/v4/"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + auth_key,
+    }
+
+    ip = requests.get("https://api.ipify.org").content.decode("utf8")
 
     for domain in domain_list:
-        logging.info('Checking if {} is up to date'.format(domain))
+        logging.info("Checking if {} is up to date".format(domain))
         update_ip(domain, ip)
