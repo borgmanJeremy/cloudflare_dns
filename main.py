@@ -44,14 +44,18 @@ def list_zones() -> List[DnsInfo]:
         raise RuntimeError("Listing DNS did not return 200")
 
 
-def get_zone_id_by_name(name: str) -> Optional[str]:
+class NoZoneDataError(Exception):
+    ...
+
+
+def get_zone_id_by_name(name: str) -> str:
     """Get a zone id associated with API key and domain name"""
 
     zone_data = list_zones()
     for zone in zone_data:
         if zone["name"] == name:
             return zone["id"]
-    return None
+    raise NoZoneDataError
 
 
 # NP - What is the structure of the returned dictionaory?
