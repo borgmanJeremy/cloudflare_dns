@@ -86,6 +86,7 @@ def update_a_record_ip(zone_id: str, ip_address: str):
 
             endpoint = "zones/" + zone_id + "/dns_records/" + record_id
             # NP: I wouldn't overwrite r here - use a new name if for no other reason than to shut up my LSP
+            # NP: I'm also not sure how to type stuff with requests... maybe making a custom type would be a fancy thing to do?
             r = requests.put(
                 api_url + endpoint,
                 headers=headers,
