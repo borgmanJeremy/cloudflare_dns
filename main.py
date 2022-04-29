@@ -138,6 +138,14 @@ def update_ip(domain_name: str, new_ip: str):
             logging.info("{} is up to date".format(domain_name))
 
 
+class NoAuthKeyError(Exception):
+    ...
+
+
+class NoDomainListError(Exception):
+    ...
+
+
 if __name__ == "__main__":
     # NP: I'd configure this at the top....
     # import logging
@@ -146,10 +154,13 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
     # NP: the .get() should include a default value otherwise you'll get None
-    auth_key = os.environ.get("CLOUDFLARE_API_KEY")
-    domain_list = os.environ.get("CLOUDFLARE_URL_LIST").split(
-        ":"
-    )  # <- might get NoneType has no method "split" here
+    auth_key = os.environ.get("CLOUDFLARE_API_KEY", None)
+    domain_list_raw = os.environ.get("CLOUDFLARE_URL_LIST", None)
+    if auth_key is None:
+        raise NoAuthKeyError
+    if domain_list_raw is None:
+        raise NoDomainListError
+    domain_list: List[str] = domain_list_raw.split(":")
 
     api_url = "https://api.cloudflare.com/client/v4/"
     headers = {
