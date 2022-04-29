@@ -22,7 +22,15 @@ class DnsInfo(TypedDict):
 
 
 def list_zones() -> List[DnsInfo]:
-    """List all zones associated with this cloudflare API key"""
+    """list_zones.
+
+    List all zones associated with this cloudflare API key
+
+    Args:
+
+    Returns:
+        List[DnsInfo]:
+    """
 
     endpoint = "zones"
     r = requests.get(api_url + endpoint, headers=headers)
