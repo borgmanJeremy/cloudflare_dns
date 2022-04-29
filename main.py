@@ -75,7 +75,8 @@ def get_a_record_ips(zone_id: str) -> List[str]:
 
     r = dns_info(zone_id)
     ip_list = []
-    for record in r["result"]:
+    res: List[DnsInfo] = r["result"]
+    for record in res:
         if record["type"] == "A":
             ip_list.append(record["content"])
     return ip_list
