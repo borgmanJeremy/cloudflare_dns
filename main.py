@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import TypedDict
+from typing import Any, Dict, List, Optional, TypedDict
 
 import requests
 
@@ -21,7 +21,7 @@ class DnsInfo(TypedDict):
     modified_on: str
 
 
-def list_zones() -> list[DnsInfo]:
+def list_zones() -> List[DnsInfo]:
     """List all zones associated with this cloudflare API key"""
 
     endpoint = "zones"
@@ -36,13 +36,14 @@ def list_zones() -> list[DnsInfo]:
         raise RuntimeError("Listing DNS did not return 200")
 
 
-def get_zone_id_by_name(name: str) -> str:
+def get_zone_id_by_name(name: str) -> Optional[str]:
     """Get a zone id associated with API key and domain name"""
 
     zone_data = list_zones()
     for zone in zone_data:
         if zone["name"] == name:
             return zone["id"]
+    return None
 
 
 def dns_info(zone_id: str) -> dict:
@@ -60,7 +61,7 @@ def dns_info(zone_id: str) -> dict:
         raise RuntimeError("Getting DNS info did not return 200")
 
 
-def get_a_record_ips(zone_id: str) -> list[str]:
+def get_a_record_ips(zone_id: str) -> List[str]:
     """Get all ip address associated with all A-records on this zone id"""
 
     r = dns_info(zone_id)
