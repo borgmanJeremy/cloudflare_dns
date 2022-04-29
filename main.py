@@ -46,7 +46,8 @@ def get_zone_id_by_name(name: str) -> Optional[str]:
     return None
 
 
-def dns_info(zone_id: str) -> dict:
+# NP - What is the structure of the returned dictionaory?
+def dns_info(zone_id: str) -> Dict[Any, Any]:
     """Get all dns information related to this zone id"""
 
     endpoint = "zones/" + zone_id + "/dns_records"
@@ -84,6 +85,7 @@ def update_a_record_ip(zone_id: str, ip_address: str):
             record_name = record["name"]
 
             endpoint = "zones/" + zone_id + "/dns_records/" + record_id
+            # NP: I wouldn't overwrite r here - use a new name if for no other reason than to shut up my LSP
             r = requests.put(
                 api_url + endpoint,
                 headers=headers,
@@ -113,6 +115,7 @@ def update_ip(domain_name: str, new_ip: str):
     """If IP address in cloudflare does match provided IP, update all A-records
     associated with this domain name on cloudflare"""
 
+    # NP: id is a reserved variable name in python - this works but breaks the builtin
     id = get_zone_id_by_name(domain_name)
     ip_addresses = get_a_record_ips(id)
     for address in ip_addresses:
@@ -123,10 +126,17 @@ def update_ip(domain_name: str, new_ip: str):
 
 
 if __name__ == "__main__":
+    # NP: I'd configure this at the top....
+    # import logging
+    # logger = logging.getLogger(__name__)
+    # # then config on logger not logging (I'm not an expert here, there's lots of ways to log appropriately)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 
+    # NP: the .get() should include a default value otherwise you'll get None
     auth_key = os.environ.get("CLOUDFLARE_API_KEY")
-    domain_list = os.environ.get("CLOUDFLARE_URL_LIST").split(":")
+    domain_list = os.environ.get("CLOUDFLARE_URL_LIST").split(
+        ":"
+    )  # <- might get NoneType has no method "split" here
 
     api_url = "https://api.cloudflare.com/client/v4/"
     headers = {
